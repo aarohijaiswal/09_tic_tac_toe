@@ -29,8 +29,7 @@ class GameEngine:
     def reset_round(self):
         """
         Reset only the current round.
-
-        The scoreboard is NOT reset.
+        The scoreboard is preserved.
         """
         self.board = [[None] * 3 for _ in range(3)]
         self.current_player = HUMAN_SYMBOL
@@ -39,10 +38,7 @@ class GameEngine:
 
     def reset_match(self):
         """
-        Reset the entire match.
-
-        This resets both the current round and the scoreboard.
-        Task 4 will later provide a separate control for this.
+        Reset the entire match, including the scoreboard.
         """
         self.reset_round()
 
@@ -61,22 +57,32 @@ class GameEngine:
 
         cell = board_pos_to_cell(pos)
 
+        # Ignore clicks outside the board.
         if cell is None:
             return
 
         row, col = cell
 
-        # Task 3 will add occupied-cell validation.
+        # Task 3:
+        # Do not allow an occupied cell to be overwritten.
+        if self.board[row][col] is not None:
+            return
+
+        # The cell is empty, so place X.
         self.board[row][col] = self.current_player
 
+        # Check whether this move ended the round.
         self.check_round_end()
 
-        # If the round ended, do not switch turns or make
-        # the computer move.
+        # If the round ended, do not switch turns
+        # or make a computer move.
         if self.round_over:
             return
 
+        # Switch to computer's turn.
         self.current_player = COMPUTER_SYMBOL
+
+        # Computer makes its move.
         self._maybe_take_computer_turn()
 
     def _maybe_take_computer_turn(self):
@@ -89,35 +95,37 @@ class GameEngine:
             return
 
         row, col = move
+
+        # Computer chooses an empty cell using the AI.
         self.board[row][col] = self.current_player
 
+        # Check whether the computer's move ended the round.
         self.check_round_end()
 
-        # If the computer's move ended the round,
-        # don't switch turns.
+        # If the round ended, don't switch turns.
         if self.round_over:
             return
 
+        # Return control to the human player.
         self.current_player = HUMAN_SYMBOL
 
     def handle_keydown(self, key):
         import pygame
 
-        # R = restart current round
-        # Scoreboard remains unchanged.
+        # R restarts only the current round.
+        # The scoreboard is preserved.
         if key == pygame.K_r:
             self.reset_round()
 
     def check_round_end(self):
-        # IMPORTANT:
-        # Check winner BEFORE checking whether the board is full.
+        # Check for a winner FIRST.
+        # This ensures a winning final move is not treated as a draw.
         winner = check_winner(self.board)
 
         if winner:
             self.round_over = True
             self.winner = winner
 
-            # Update the appropriate score exactly once.
             if winner == HUMAN_SYMBOL:
                 self.x_wins += 1
             elif winner == COMPUTER_SYMBOL:
@@ -125,12 +133,10 @@ class GameEngine:
 
             return
 
-        # Only check for draw if there is no winner.
+        # Only check for a draw if there is no winner.
         if is_board_full(self.board):
             self.round_over = True
             self.winner = None
-
-            # Update draw count.
             self.draws += 1
 
             return
@@ -140,7 +146,7 @@ class GameEngine:
 
         renderer.draw_board(surface, self.board)
 
-        # Display scoreboard.
+        # Task 2: Display scoreboard.
         renderer.draw_scoreboard(
             surface,
             font,
@@ -163,7 +169,7 @@ class GameEngine:
             (10, 50)
         )
 
-        # Display result when round is over.
+        # Display result when the round is over.
         if self.round_over:
             text = (
                 f"{self.winner} wins!"
